@@ -1,26 +1,32 @@
-export interface Medication {
-  id: string;
-  name: string;
-  activeIngredients: string[];
-  usage: string;
-  dosage: string;
-  sideEffects: string[];
-  contraindications: string[];
-  isGeneric: boolean;
-  brandNames?: string[];
+export interface UserInfo {
+  age: number;
+  ageUnit: 'years' | 'months';
+  gender: string;
+  primaryIssue: string;
 }
 
-export interface Symptom {
+export interface Question {
   id: string;
-  name: string;
-  description: string;
+  question: string;
+  options: string[];
 }
 
-export interface UserProfile {
-  allergies: string[];
-  medicalHistory: string[];
-  preferences: {
-    preferGeneric: boolean;
-    language: string;
+export interface Recommendation {
+  severity: 'mild' | 'medium' | 'serious';
+  medications: {
+    name: string;
+    dosage: string;
+    frequency: string;
+  }[];
+  instructions: string;
+  precautions: string[];
+  seekHelp: string;
+  alternatives: {
+    naturalRemedies: string[];
+    alternativeMedications: {
+      name: string;
+      description: string;
+    }[];
   };
+  lifestyle: string[];
 }

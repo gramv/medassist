@@ -1,146 +1,179 @@
-import { type FC } from 'react';
-import { AlertTriangle, Clock, Pill, ShieldAlert, Lightbulb, ArrowRight, AlertCircle } from 'lucide-react';
-import type { MedicationRecommendation } from '../types/medical';
+import { Recommendation } from '../types';
+import { 
+  PillIcon, 
+  RotateCcw, 
+  AlertCircle, 
+  ShieldCheck,
+  Printer,
+  Sparkles
+} from 'lucide-react';
 
 interface Props {
-  recommendation: MedicationRecommendation;
+  recommendation: Recommendation;
   onReset: () => void;
 }
 
-const RecommendationDisplay: FC<Props> = ({ recommendation, onReset }) => {
-  const getUrgencyColor = (level: string) => {
-    switch (level) {
-      case 'urgent':
-        return 'text-red-600 bg-red-50 border-red-100';
-      case 'soon':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-100';
-      default:
-        return 'text-green-600 bg-green-50 border-green-100';
-    }
-  };
-
+function RecommendationDisplay({ recommendation, onReset }: Props) {
   return (
-    <div className="space-y-6">
-      <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-700">
-          This tool provides general recommendations only. Always consult a healthcare professional for medical advice.
-        </p>
-      </div>
-
-      {recommendation.seekMedicalAttention && (
-        <div className="p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-medium text-red-800">Medical Attention Recommended</h3>
-            <p className="mt-1 text-sm text-red-700">
-              Based on your symptoms, we recommend consulting a healthcare professional.
-              The following recommendations are for temporary relief only.
-            </p>
+    <div className="space-y-8">
+      {/* Severity Alert */}
+      {recommendation.severity !== 'mild' && (
+        <div className={`rounded-lg p-4 ${
+          recommendation.severity === 'serious' 
+            ? 'bg-red-50 border-l-4 border-red-500' 
+            : 'bg-yellow-50 border-l-4 border-yellow-500'
+        }`}>
+          <div className="flex items-start">
+            <AlertCircle className={`h-6 w-6 ${
+              recommendation.severity === 'serious' ? 'text-red-600' : 'text-yellow-600'
+            } mt-0.5 flex-shrink-0`} />
+            <div className="ml-3">
+              <h3 className={`text-lg font-semibold ${
+                recommendation.severity === 'serious' ? 'text-red-800' : 'text-yellow-800'
+              }`}>
+                {recommendation.severity === 'serious' 
+                  ? 'Immediate Medical Attention Recommended'
+                  : 'Medical Consultation Recommended'
+                }
+              </h3>
+              <p className={`text-sm mt-1 ${
+                recommendation.severity === 'serious' ? 'text-red-700' : 'text-yellow-700'
+              }`}>
+                {recommendation.severity === 'serious'
+                  ? 'Based on your symptoms, please seek immediate medical care. The following recommendations are for temporary relief only.'
+                  : 'Based on your symptoms, we recommend consulting a healthcare professional soon. The following recommendations can help manage your symptoms in the meantime.'
+                }
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-            <Pill className="w-5 h-5 text-red-500" />
-            Primary Recommendation
-          </h3>
-          
-          <div className="mt-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <h4 className="font-medium">{recommendation.primaryMedication.name}</h4>
-              <span className={`px-2 py-0.5 text-xs rounded-full ${getUrgencyColor(recommendation.urgencyLevel)}`}>
-                {recommendation.urgencyLevel.charAt(0).toUpperCase() + recommendation.urgencyLevel.slice(1)}
-              </span>
-            </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700">Dosage</p>
-                <p className="mt-1 text-sm text-gray-600">{recommendation.primaryMedication.dosage}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700">Frequency</p>
-                <p className="mt-1 text-sm text-gray-600">{recommendation.primaryMedication.frequency}</p>
-              </div>
-            </div>
+      {/* Header */}
+      <div className="text-center border-b pb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Treatment Recommendations</h2>
+        <p className="mt-2 text-gray-600">
+          Personalized guidance for symptom management
+        </p>
+      </div>
 
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-gray-700">Duration</p>
-              <p className="mt-1 text-sm text-gray-600">{recommendation.primaryMedication.duration}</p>
-            </div>
-
-            {recommendation.primaryMedication.warnings.length > 0 && (
-              <div className="flex items-start gap-2 text-sm text-yellow-700">
-                <ShieldAlert className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                <ul className="list-disc list-inside space-y-1">
-                  {recommendation.primaryMedication.warnings.map((warning, index) => (
-                    <li key={index}>{warning}</li>
-                  ))}
-                </ul>
+      {/* Primary Recommendation */}
+      <div className="space-y-6">
+        <div className="bg-blue-50 rounded-xl p-6">
+          <h3 className="text-xl font-bold text-blue-900 mb-4">Primary Recommendation</h3>
+          {recommendation.medications.map((med, index) => (
+            <div key={index} className="space-y-4">
+              <h4 className="text-lg font-semibold text-blue-800">{med.name}</h4>
+              <div className="bg-white rounded-lg p-4 space-y-4">
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">Routine</h5>
+                  <div className="grid gap-4">
+                    <div>
+                      <span className="text-sm text-gray-500">Dosage</span>
+                      <p className="font-medium text-gray-900">{med.dosage}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Frequency</span>
+                      <p className="font-medium text-gray-900">{med.frequency}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+          ))}
+        </div>
+
+        {/* Alternative Options */}
+        <div className="bg-purple-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Alternative Options</h3>
+          </div>
+          <div className="space-y-4">
+            {/* Natural Remedies */}
+            <div className="bg-white rounded-lg p-4">
+              <h4 className="font-medium text-purple-800 mb-2">Natural Remedies</h4>
+              <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                {recommendation.alternatives.naturalRemedies.map((remedy, index) => (
+                  <li key={index}>{remedy}</li>
+                ))}
+              </ul>
+            </div>
+            {/* Alternative Medications */}
+            <div className="bg-white rounded-lg p-4">
+              <h4 className="font-medium text-purple-800 mb-2">Alternative Medications</h4>
+              <div className="space-y-3">
+                {recommendation.alternatives.alternativeMedications.map((med, index) => (
+                  <div key={index} className="border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                    <p className="font-medium text-gray-900">{med.name}</p>
+                    <p className="text-sm text-gray-700">{med.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {recommendation.alternativeOptions && recommendation.alternativeOptions.length > 0 && (
-          <div className="border-t border-gray-100 p-6">
-            <h4 className="font-medium text-gray-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              Alternative Options
-            </h4>
-            <ul className="mt-3 space-y-3">
-              {recommendation.alternativeOptions.map((alt, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-medium text-gray-700">{alt.name}</span>
-                    <p className="text-sm text-gray-600">{alt.context}</p>
-                  </div>
-                </li>
+        {/* Lifestyle Recommendations */}
+        <div className="bg-green-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-5 w-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Lifestyle Recommendations</h3>
+          </div>
+          <div className="bg-white rounded-lg p-4">
+            <ul className="list-disc pl-5 space-y-2 text-gray-700">
+              {recommendation.lifestyle.map((item, index) => (
+                <li key={index}>{item}</li>
               ))}
             </ul>
           </div>
-        )}
+        </div>
 
-        <div className="border-t border-gray-100 p-6">
-          <h4 className="font-medium text-gray-900 flex items-center gap-2">
-            <Lightbulb className="w-4 h-4 text-gray-500" />
-            Lifestyle Recommendations
-          </h4>
-          <ul className="mt-3 space-y-2">
-            {recommendation.lifestyle.map((tip, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                {tip}
+        {/* Precautions */}
+        <div className="bg-yellow-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Important Precautions</h3>
+          </div>
+          <ul className="space-y-2">
+            {recommendation.precautions.map((precaution, index) => (
+              <li key={index} className="flex items-start gap-2">
+                <span className="text-yellow-600 font-bold text-sm mt-1">•</span>
+                <span className="text-gray-700">{precaution}</span>
               </li>
             ))}
           </ul>
         </div>
+
+        {/* When to Seek Help */}
+        <div className="bg-red-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="h-5 w-5 text-red-600" />
+            <h3 className="font-semibold text-gray-900">When to Seek Medical Help</h3>
+          </div>
+          <p className="text-gray-700">{recommendation.seekHelp}</p>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4">
+      {/* Action Buttons */}
+      <div className="flex gap-4 pt-4">
         <button
           onClick={onReset}
-          className="px-6 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors"
         >
+          <RotateCcw className="w-4 h-4" />
           Start New Assessment
         </button>
         <button
           onClick={() => window.print()}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+          className="flex items-center justify-center gap-2 px-6 bg-gray-100 text-gray-700 p-3 rounded-lg hover:bg-gray-200 transition-colors"
         >
-          Print Report
+          <Printer className="w-4 h-4" />
+          Print
         </button>
-      </div>
-
-      <div className="text-center text-sm text-gray-500 pt-4 border-t">
-        <p>© {new Date().getFullYear()} MedAssist. All recommendations are for informational purposes only.</p>
       </div>
     </div>
   );
-};
+}
 
 export default RecommendationDisplay; 
