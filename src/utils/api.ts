@@ -8,38 +8,43 @@ const groq = new Groq({
 });
 
 export async function generateFollowUpQuestions(userInfo: UserInfo) {
+  const isChild = userInfo.ageUnit === 'months' || (userInfo.ageUnit === 'years' && userInfo.age < 12);
+  
   try {
-    const prompt = `As an experienced medical professional, generate 2-3 highly specific diagnostic questions for a patient with:
+    const prompt = `As a pediatrician${!isChild ? ' and general practitioner' : ''}, generate 2-3 specific diagnostic questions for a patient:
 
 Patient Profile:
-- Age: ${userInfo.age} ${userInfo.ageUnit}
+- Age: ${userInfo.age} ${userInfo.ageUnit} ${isChild ? '(CHILD PATIENT)' : ''}
 - Gender: ${userInfo.gender}
 - Primary Symptom: ${userInfo.primaryIssue}
+
+${isChild ? 'IMPORTANT: This is a child patient. Questions must be appropriate for pediatric assessment.' : ''}
 
 Requirements:
 1. Questions must be specifically tailored to ${userInfo.primaryIssue}
 2. Each question should be clear and concise
 3. Provide 3-4 distinct options for each question
-4. Do not include option labels (A, B, C) in the question text
-5. Focus on key diagnostic factors such as:
+4. Focus on:
+   ${isChild ? `
+   - Duration and pattern of symptoms
+   - Impact on eating/drinking/sleep
+   - Associated symptoms
+   - Previous remedies tried by parents
+   - Any exposure to sick contacts` 
+   : `
    - Pattern and timing of symptoms
    - Aggravating and relieving factors
    - Associated symptoms
    - Impact on daily activities
-   - Previous treatments tried
+   - Previous treatments tried`}
 
 Return ONLY a JSON array like this:
 {
   "questions": [
     {
       "id": "q1",
-      "question": "Have you tried any treatments for your symptoms?",
-      "options": [
-        "Over-the-counter nasal sprays",
-        "Home remedies like ice or pressure",
-        "Prescription medications",
-        "No treatments tried"
-      ]
+      "question": "question text",
+      "options": ["option 1", "option 2", "option 3"]
     }
   ]
 }`;
@@ -61,28 +66,38 @@ Return ONLY a JSON array like this:
 }
 
 export async function generateRecommendation(userInfo: UserInfo, answers: Record<string, string>) {
+  const isChild = userInfo.ageUnit === 'months' || (userInfo.ageUnit === 'years' && userInfo.age < 12);
+  const isInfant = userInfo.ageUnit === 'months' && userInfo.age < 24;
+  
   try {
-    const prompt = `As a medical professional, analyze this case and provide recommendations:
+    const prompt = `As a ${isChild ? 'pediatrician' : 'medical professional'}, provide SAFE recommendations for:
 
 Patient Profile:
-Age: ${userInfo.age} ${userInfo.ageUnit}
+Age: ${userInfo.age} ${userInfo.ageUnit} ${isChild ? '(CHILD PATIENT)' : ''}
 Gender: ${userInfo.gender}
 Main Symptom: ${userInfo.primaryIssue}
+
+${isChild ? `CRITICAL SAFETY NOTICE:
+- This is a ${isInfant ? 'INFANT' : 'CHILD'} patient
+- Medications must be specifically safe for ${userInfo.age} ${userInfo.ageUnit} old
+- Dosing must be precisely calculated for child's age
+- Many adult medications are NOT safe for children
+- When in doubt, recommend professional medical care` : ''}
 
 Assessment Responses:
 ${Object.entries(answers).map(([q, a]) => `- ${a}`).join('\n')}
 
-First, assess the severity of the condition and provide a treatment plan in this EXACT JSON format:
+Provide recommendations in this EXACT JSON format:
 {
   "severity": "mild | medium | serious (based on symptoms and responses)",
   "medications": [
     {
-      "name": "Primary medication name (Brand example)",
-      "dosage": "Specific dosage for patient age",
+      "name": "Medication name (Brand example) - MUST BE AGE-APPROPRIATE",
+      "dosage": "Precise age-appropriate dosage",
       "frequency": "How often to take"
     }
   ],
-  "instructions": "Brief, clear instructions for medication use",
+  "instructions": "Clear instructions for medication use",
   "precautions": [
     "Key precaution 1",
     "Key precaution 2"
@@ -90,35 +105,39 @@ First, assess the severity of the condition and provide a treatment plan in this
   "seekHelp": "When to get emergency care",
   "alternatives": {
     "naturalRemedies": [
-      "Specific natural remedy 1",
-      "Specific natural remedy 2",
-      "Specific natural remedy 3"
+      "Safe natural remedy 1",
+      "Safe natural remedy 2"
     ],
     "alternativeMedications": [
       {
-        "name": "Alternative medication name",
-        "description": "Brief description of when to consider this alternative"
+        "name": "Alternative medication name - MUST BE AGE-APPROPRIATE",
+        "description": "When to consider this alternative"
       }
     ]
   },
   "lifestyle": [
-    "Specific lifestyle recommendation 1",
-    "Specific lifestyle recommendation 2",
-    "Specific lifestyle recommendation 3"
+    "Age-appropriate lifestyle recommendation 1",
+    "Age-appropriate lifestyle recommendation 2"
   ]
 }
 
-Requirements:
-- Assess severity as:
-  * mild: can be safely managed at home
-  * medium: should be checked by doctor soon but not urgent
-  * serious: needs prompt medical attention
-- All recommendations must be specific to ${userInfo.primaryIssue}
-- Consider patient age (${userInfo.age} ${userInfo.ageUnit}) for all suggestions
-- Include only evidence-based natural remedies
-- Suggest practical lifestyle changes
-- List appropriate alternative medications
-- Keep all descriptions concise and clear`;
+SAFETY REQUIREMENTS:
+${isChild ? `
+- ALL medications MUST be explicitly safe for ${userInfo.age} ${userInfo.ageUnit} old children
+- Include ONLY pediatric formulations and dosages
+- For infants under 2 years, recommend professional medical care for most symptoms
+- Be extremely cautious with medication recommendations
+- When in doubt, recommend professional medical evaluation
+- Many OTC medications are NOT safe for young children` 
+: `
+- Consider age-specific contraindications
+- Include appropriate dosing for adult age groups
+- List specific precautions for the recommended medications
+- Consider interactions with common conditions`}
+
+- If symptoms suggest anything beyond mild severity, recommend professional medical care
+- Be specific about emergency warning signs
+- Include age-appropriate alternatives and lifestyle modifications`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
@@ -135,15 +154,11 @@ Requirements:
     const cleanedResponse = response.trim().replace(/```json|```/g, '');
     const recommendation = JSON.parse(cleanedResponse);
 
-    // Validate all required fields
-    if (!recommendation.medications?.length || 
-        !recommendation.instructions || 
-        !recommendation.precautions?.length || 
-        !recommendation.seekHelp ||
-        !recommendation.alternatives?.naturalRemedies?.length ||
-        !recommendation.alternatives?.alternativeMedications?.length ||
-        !recommendation.lifestyle?.length) {
-      throw new Error('Invalid recommendation format');
+    // Additional safety validation for children
+    if (isChild && recommendation.severity !== 'mild') {
+      recommendation.medications = [];
+      recommendation.severity = 'serious';
+      recommendation.instructions = "For children of this age, please consult a healthcare provider for proper evaluation and treatment.";
     }
 
     return recommendation;
