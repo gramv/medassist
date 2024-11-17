@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Question } from '../types';
-import { Loader } from 'lucide-react';
+import { Loader, ArrowLeft } from 'lucide-react';
 
 interface Props {
   questions: Question[];
@@ -37,26 +37,28 @@ function QuestionnaireForm({ questions, onComplete, loading }: Props) {
     }
   };
 
-  const cleanQuestionText = (text: string) => {
-    return text.split('(A)')[0].trim();
-  };
-
-  const getOptions = (question: Question) => {
-    if (question.options.length > 0 && question.options[0].includes('(A)')) {
-      return question.options[0].split(', ').map(opt => {
-        const match = opt.match(/\([A-D]\)\s*(.*?)(?=(?:\([A-D]\)|$))/);
-        return match ? match[1].trim() : opt.trim();
-      });
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
     }
-    return question.options;
   };
 
   return (
     <div className="space-y-6">
       <div className="mb-8">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
+        <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
+          <div className="flex items-center gap-2">
+            {currentIndex > 0 && (
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Previous
+              </button>
+            )}
+          </div>
           <span>Question {currentIndex + 1} of {questions.length}</span>
-          <span>{Math.round(progress)}% Complete</span>
         </div>
         <div className="w-full h-2 bg-gray-200 rounded-full">
           <div 
@@ -68,10 +70,10 @@ function QuestionnaireForm({ questions, onComplete, loading }: Props) {
 
       <div className="text-center mb-8">
         <h3 className="text-xl font-semibold text-gray-900 mb-6">
-          {cleanQuestionText(currentQuestion.question)}
+          {currentQuestion.question}
         </h3>
         <div className="space-y-3">
-          {getOptions(currentQuestion).map((option: string, index: number) => (
+          {currentQuestion.options.map((option, index) => (
             <button
               key={index}
               onClick={() => handleAnswer(option)}

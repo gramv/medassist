@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, AlertCircle } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import AssessmentForm from './components/AssessmentForm';
 import QuestionnaireForm from './components/QuestionnaireForm';
@@ -69,12 +69,15 @@ function App() {
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
               <Heart className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-semibold text-blue-600">
                 OTCMed Assist
               </span>
-            </div>
+            </button>
           </div>
         </div>
       </header>
