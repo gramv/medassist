@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { UserInfo } from '../types';
 import { Stethoscope, Loader } from 'lucide-react';
+import { UserInfo } from '../types';
 
 interface Props {
   onSubmit: (userInfo: UserInfo) => void;
@@ -17,7 +17,6 @@ function AssessmentForm({ onSubmit, loading }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting:', userInfo); // Debug log
     onSubmit(userInfo);
   };
 
@@ -54,12 +53,9 @@ function AssessmentForm({ onSubmit, loading }: Props) {
               />
             </div>
             <select
-              className="px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={userInfo.ageUnit}
-              onChange={(e) => setUserInfo({ 
-                ...userInfo, 
-                ageUnit: e.target.value as 'years' | 'months'
-              })}
+              onChange={(e) => setUserInfo({ ...userInfo, ageUnit: e.target.value as 'years' | 'months' })}
+              className="px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="years">Years</option>
               <option value="months">Months</option>
@@ -71,7 +67,7 @@ function AssessmentForm({ onSubmit, loading }: Props) {
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-900">Gender</label>
           <div className="grid grid-cols-3 gap-4">
-            {['male', 'female', 'other'].map((option) => (
+            {['Male', 'Female', 'Other'].map((option) => (
               <button
                 key={option}
                 type="button"

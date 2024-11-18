@@ -1,175 +1,261 @@
-import { Recommendation } from '../types';
+import { FinalRecommendation } from '../types';
 import { 
-  PillIcon, 
-  RotateCcw, 
-  AlertCircle, 
-  ShieldCheck,
-  Printer,
-  Sparkles
+  AlertTriangle,
+  Pill, 
+  RotateCw, 
+  Leaf,
+  ListChecks,
+  AlertCircle,
+  MessageSquare,
+  FileCheck,
+  ArrowRight
 } from 'lucide-react';
 
 interface Props {
-  recommendation: Recommendation;
+  recommendation: FinalRecommendation;
   onReset: () => void;
 }
 
 function RecommendationDisplay({ recommendation, onReset }: Props) {
+  const requiresUrgentCare = 
+    recommendation.medicalAttention?.required || 
+    recommendation.severity === 'severe' ||
+    (recommendation.severity === 'moderate');
+
   return (
     <div className="space-y-8">
-      {/* Severity Alert */}
-      {recommendation.severity !== 'mild' && (
-        <div className={`rounded-lg p-4 ${
-          recommendation.severity === 'serious' 
-            ? 'bg-red-50 border-l-4 border-red-500' 
-            : 'bg-yellow-50 border-l-4 border-yellow-500'
-        }`}>
-          <div className="flex items-start">
-            <AlertCircle className={`h-6 w-6 ${
-              recommendation.severity === 'serious' ? 'text-red-600' : 'text-yellow-600'
-            } mt-0.5 flex-shrink-0`} />
-            <div className="ml-3">
-              <h3 className={`text-lg font-semibold ${
-                recommendation.severity === 'serious' ? 'text-red-800' : 'text-yellow-800'
-              }`}>
-                {recommendation.severity === 'serious' 
-                  ? 'Immediate Medical Attention Recommended'
-                  : 'Medical Consultation Recommended'
-                }
+      {requiresUrgentCare && (
+        <div className="bg-red-50 rounded-xl p-6 border-l-4 border-red-500">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-semibold text-red-900">
+                Medical Attention Required
               </h3>
-              <p className={`text-sm mt-1 ${
-                recommendation.severity === 'serious' ? 'text-red-700' : 'text-yellow-700'
-              }`}>
-                {recommendation.severity === 'serious'
-                  ? 'Based on your symptoms, please seek immediate medical care. The following recommendations are for temporary relief only.'
-                  : 'Based on your symptoms, we recommend consulting a healthcare professional soon. The following recommendations can help manage your symptoms in the meantime.'
-                }
+              <p className="text-red-700 mt-1">
+                Timeframe: {recommendation.medicalAttention?.timeframe || 'As soon as possible'}
               </p>
+              <div className="mt-3 bg-white bg-opacity-50 rounded-lg p-4">
+                <h4 className="font-medium text-red-800 mb-2">Reasons:</h4>
+                <ul className="space-y-2">
+                  {recommendation.medicalAttention?.reasons?.map((reason, index) => (
+                    <li key={index} className="flex items-start gap-2 text-red-700">
+                      <span>•</span>
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="text-center border-b pb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Treatment Recommendations</h2>
-        <p className="mt-2 text-gray-600">
-          Personalized guidance for symptom management
-        </p>
-      </div>
+      <h2 className="text-2xl font-bold text-gray-900">
+        Treatment Recommendations
+      </h2>
+      <p className="text-gray-600">
+        Personalized guidance for symptom management
+      </p>
 
-      {/* Primary Recommendation */}
-      <div className="space-y-6">
-        <div className="bg-blue-50 rounded-xl p-6">
-          <h3 className="text-xl font-bold text-blue-900 mb-4">Primary Recommendation</h3>
-          {recommendation.medications.map((med, index) => (
-            <div key={index} className="space-y-4">
-              <h4 className="text-lg font-semibold text-blue-800">{med.name}</h4>
-              <div className="bg-white rounded-lg p-4 space-y-4">
-                <div>
-                  <h5 className="font-medium text-gray-700 mb-2">Routine</h5>
-                  <div className="grid gap-4">
-                    <div>
-                      <span className="text-sm text-gray-500">Dosage</span>
-                      <p className="font-medium text-gray-900">{med.dosage}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-500">Frequency</span>
-                      <p className="font-medium text-gray-900">{med.frequency}</p>
-                    </div>
+      {/* Medication Timeline */}
+      {recommendation.medications?.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-6">
+            Treatment Timeline
+          </h3>
+          <div className="space-y-6">
+            {recommendation.medications.map((med, index) => (
+              <div key={index} className="relative pl-8 pb-6 border-l-2 border-blue-200 last:border-0">
+                <div className="absolute left-0 top-0 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500" />
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900">{med.name}</h4>
+                  <div className="mt-2 space-y-2 text-sm">
+                    <p><span className="font-medium">Dosage:</span> {med.dosage}</p>
+                    <p><span className="font-medium">Frequency:</span> {med.frequency}</p>
+                    <p><span className="font-medium">Duration:</span> {med.duration}</p>
                   </div>
+                  {med.warnings && (
+                    <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-800">Important Notes:</p>
+                      <ul className="mt-1 space-y-1">
+                        {med.warnings.map((warning, idx) => (
+                          <li key={idx} className="text-sm text-yellow-700">• {warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Alternative Options */}
-        <div className="bg-purple-50 rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-5 w-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Alternative Options</h3>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* Monitoring Section */}
+      {recommendation.monitoring && (
+        <div className="bg-purple-50 rounded-xl p-6">
+          <h3 className="text-xl font-bold text-purple-900 mb-4">
+            Monitoring & Follow-up
+          </h3>
           <div className="space-y-4">
-            {/* Natural Remedies */}
-            <div className="bg-white rounded-lg p-4">
-              <h4 className="font-medium text-purple-800 mb-2">Natural Remedies</h4>
-              <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                {recommendation.alternatives.naturalRemedies.map((remedy, index) => (
-                  <li key={index}>{remedy}</li>
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-medium text-purple-900 mb-2">Watch for These Signs:</h4>
+              <ul className="space-y-2">
+                {recommendation.monitoring?.warningSignals?.map((signal, index) => (
+                  <li key={index} className="flex items-start gap-2 text-purple-800">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span>{signal}</span>
+                  </li>
                 ))}
               </ul>
             </div>
-            {/* Alternative Medications */}
-            <div className="bg-white rounded-lg p-4">
-              <h4 className="font-medium text-purple-800 mb-2">Alternative Medications</h4>
-              <div className="space-y-3">
-                {recommendation.alternatives.alternativeMedications.map((med, index) => (
-                  <div key={index} className="border-b border-gray-100 last:border-0 pb-2 last:pb-0">
-                    <p className="font-medium text-gray-900">{med.name}</p>
-                    <p className="text-sm text-gray-700">{med.description}</p>
-                  </div>
+
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-medium text-purple-900 mb-2">When to Seek Help:</h4>
+              <ul className="space-y-2">
+                {recommendation.monitoring?.seekHelpIf?.map((condition, index) => (
+                  <li key={index} className="flex items-start gap-2 text-purple-800">
+                    <span>•</span>
+                    <span>{condition}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Lifestyle Recommendations */}
-        <div className="bg-green-50 rounded-xl p-6">
+      {/* Natural Remedies Section */}
+      {recommendation.alternatives?.naturalRemedies?.length > 0 && (
+        <div className="bg-emerald-50 rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-5 w-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Lifestyle Recommendations</h3>
+            <Leaf className="h-6 w-6 text-emerald-600" />
+            <h3 className="text-xl font-bold text-emerald-900">Natural Remedies</h3>
           </div>
-          <div className="bg-white rounded-lg p-4">
-            <ul className="list-disc pl-5 space-y-2 text-gray-700">
-              {recommendation.lifestyle.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Precautions */}
-        <div className="bg-yellow-50 rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="h-5 w-5 text-yellow-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Important Precautions</h3>
-          </div>
-          <ul className="space-y-2">
-            {recommendation.precautions.map((precaution, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="text-yellow-600 font-bold text-sm mt-1">•</span>
-                <span className="text-gray-700">{precaution}</span>
-              </li>
+          <div className="space-y-4">
+            {recommendation.alternatives.naturalRemedies.map((remedy, index) => (
+              <div key={index} className="bg-white bg-opacity-50 rounded-lg p-4">
+                <h4 className="font-medium text-emerald-800">{remedy.remedy}</h4>
+                <div className="mt-2 space-y-2 text-sm text-emerald-700">
+                  <p><span className="font-medium">Usage:</span> {remedy.usage}</p>
+                  <p><span className="font-medium">Frequency:</span> {remedy.frequency}</p>
+                  <p><span className="font-medium">Benefits:</span> {remedy.benefits}</p>
+                </div>
+              </div>
             ))}
-          </ul>
-        </div>
-
-        {/* When to Seek Help */}
-        <div className="bg-red-50 rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <ShieldCheck className="h-5 w-5 text-red-600" />
-            <h3 className="font-semibold text-gray-900">When to Seek Medical Help</h3>
           </div>
-          <p className="text-gray-700">{recommendation.seekHelp}</p>
         </div>
-      </div>
+      )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-4 pt-4">
+      {/* Alternative Medications */}
+      {recommendation.alternatives?.alternativeMedications?.length > 0 && (
+        <div className="bg-indigo-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Pill className="h-6 w-6 text-indigo-600" />
+            <h3 className="text-xl font-bold text-indigo-900">Alternative Medications</h3>
+          </div>
+          <div className="space-y-4">
+            {recommendation.alternatives.alternativeMedications.map((med, index) => (
+              <div key={index} className="bg-white bg-opacity-50 rounded-lg p-4">
+                <h4 className="font-medium text-indigo-800">{med.name}</h4>
+                <p className="text-sm text-indigo-600 mt-1">
+                  Available as: {med.brandNames.join(', ')}
+                </p>
+                <div className="mt-2 space-y-2 text-sm text-indigo-700">
+                  <p><span className="font-medium">When to consider:</span> {med.whenToConsider}</p>
+                  <p><span className="font-medium">Benefits:</span> {med.benefits}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lifestyle Recommendations */}
+      {recommendation.lifestyle?.length > 0 && (
+        <div className="bg-amber-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ListChecks className="h-6 w-6 text-amber-600" />
+            <h3 className="text-xl font-bold text-amber-900">Lifestyle Recommendations</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recommendation.lifestyle.map((item, index) => (
+              <div key={index} className="bg-white bg-opacity-50 rounded-lg p-4">
+                <h4 className="font-medium text-amber-800 capitalize">{item.category}</h4>
+                <ul className="mt-2 space-y-2">
+                  {item.recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-amber-700">
+                      <span>•</span>
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Doctor Visit Section - Only for moderate/severe cases */}
+      {(recommendation.severity === 'moderate' || recommendation.severity === 'severe') && 
+       recommendation.doctorVisit && (
+        <div className="bg-blue-50 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-6 w-6 text-blue-600" />
+            <h3 className="text-xl font-bold text-blue-900">Questions for Your Doctor</h3>
+          </div>
+          <div className="space-y-4">
+            {/* Questions to Ask */}
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Questions to Ask:</h4>
+              <ul className="space-y-2">
+                {recommendation.doctorVisit.questionsForDoctor.map((question, index) => (
+                  <li key={index} className="flex items-start gap-2 text-blue-700">
+                    <span>•</span>
+                    <span>{question}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Symptoms to Mention */}
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Important Symptoms to Mention:</h4>
+              <ul className="space-y-2">
+                {recommendation.doctorVisit.symptomsToMention.map((symptom, index) => (
+                  <li key={index} className="flex items-start gap-2 text-blue-700">
+                    <span>•</span>
+                    <span>{symptom}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Suggested Tests */}
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Tests That May Be Needed:</h4>
+              <ul className="space-y-2">
+                {recommendation.doctorVisit.suggestedTests.map((test, index) => (
+                  <li key={index} className="flex items-start gap-2 text-blue-700">
+                    <span>•</span>
+                    <span>{test}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Button */}
+      <div className="flex justify-center pt-4">
         <button
           onClick={onReset}
-          className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-6 py-3 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCw className="h-5 w-5" />
           Start New Assessment
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center justify-center gap-2 px-6 bg-gray-100 text-gray-700 p-3 rounded-lg hover:bg-gray-200 transition-colors"
-        >
-          <Printer className="w-4 h-4" />
-          Print
         </button>
       </div>
     </div>
