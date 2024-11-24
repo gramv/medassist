@@ -1,5 +1,7 @@
+// In components/ConditionMismatchPrompt.tsx
+
 import { ImageAnalysisResult } from '../types';
-import { AlertTriangle, Eye, CircleDot } from 'lucide-react';
+import { AlertTriangle, CircleDot, Eye } from 'lucide-react';
 
 interface Props {
   reportedCondition: string;
@@ -14,6 +16,11 @@ function ConditionMismatchPrompt({
   onContinueWithImage,
   onContinueWithReported
 }: Props) {
+  // Safely access nested properties
+  const detectedLocation = imageAnalysis?.bodyPart?.detected || 'detected area';
+  const conditionType = imageAnalysis?.condition?.type || 'detected condition';
+  const characteristics = imageAnalysis?.condition?.characteristics || [];
+
   return (
     <div className="space-y-6">
       <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
@@ -25,15 +32,17 @@ function ConditionMismatchPrompt({
             </h3>
             <p className="mt-2 text-yellow-800">
               You reported symptoms in your <span className="font-medium">{reportedCondition}</span>,
-              but the image shows a condition on your {imageAnalysis.bodyPart.detected}.
+              but the image shows a condition on your {detectedLocation}.
             </p>
             
             <div className="mt-4 bg-white bg-opacity-50 rounded-lg p-4">
               <h4 className="font-medium text-yellow-900">Image Analysis:</h4>
               <ul className="mt-2 space-y-1 text-yellow-800">
-                <li>• Location: {imageAnalysis.bodyPart.detected}</li>
-                <li>• Condition: {imageAnalysis.condition.type}</li>
-                <li>• Symptoms: {imageAnalysis.condition.characteristics.join(', ')}</li>
+                <li>• Location: {detectedLocation}</li>
+                <li>• Condition: {conditionType}</li>
+                {characteristics.length > 0 && (
+                  <li>• Characteristics: {characteristics.join(', ')}</li>
+                )}
               </ul>
             </div>
 
@@ -52,7 +61,7 @@ function ConditionMismatchPrompt({
           <CircleDot className="h-5 w-5" />
           Get help for the condition shown in image
           <span className="text-sm opacity-90">
-            ({imageAnalysis.condition.type} on {imageAnalysis.bodyPart.detected})
+            ({conditionType} on {detectedLocation})
           </span>
         </button>
 
@@ -71,4 +80,4 @@ function ConditionMismatchPrompt({
   );
 }
 
-export default ConditionMismatchPrompt; 
+export default ConditionMismatchPrompt;

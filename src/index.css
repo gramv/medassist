@@ -1,3 +1,103 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in;
+}
+.fade-exit {
+  opacity: 1;
+}
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease-in;
+}
+
+.slide-enter {
+  transform: translateX(100%);
+}
+.slide-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-in;
+}
+.slide-exit {
+  transform: translateX(0);
+}
+.slide-exit-active {
+  transform: translateX(-100%);
+  transition: transform 300ms ease-in;
+}
+@media print {
+  /* Hide everything except print content */
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-content,
+  .print-content * {
+    visibility: visible !important;
+  }
+
+  .print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Basic styling */
+  .print-content {
+    font-size: 12pt;
+    line-height: 1.4;
+    color: black;
+  }
+
+  /* Headers */
+  .print-content h1 { font-size: 18pt; }
+  .print-content h2 { font-size: 16pt; }
+  .print-content h3 { font-size: 14pt; }
+
+  /* Sections */
+  .print-section {
+    margin-bottom: 20pt;
+    page-break-inside: avoid;
+  }
+
+  /* Lists */
+  .print-content ul {
+    margin-left: 20pt;
+    padding-left: 0;
+  }
+
+  /* Grid */
+  .print-content .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20pt;
+  }
+
+  /* Borders */
+  .print-content .border {
+    border: 1pt solid black !important;
+  }
+
+  .print-content .border-b-2 {
+    border-bottom: 2pt solid black !important;
+  }
+
+  /* Margins and padding */
+  @page {
+    margin: 2cm;
+  }
+
+  /* Force background colors */
+  .print-content * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
