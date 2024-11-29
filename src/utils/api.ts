@@ -1,1 +1,10 @@
-aW1wb3J0IHsgR3JvcSB9IGZyb20gJ2dyb3Etc2RrJzsKaW1wb3J0IHsgZW52IH0gZnJvbSAnLi4vY29uZmlnL2Vudic7CmltcG9ydCB7IAogIFVzZXJJbmZvLCAKICBRdWVzdGlvbiwgCiAgRmluYWxSZWNvbW1lbmRhdGlvbiwgCiAgSW1hZ2VBbmFseXNpc1Jlc3VsdCwgCiAgRGV0YWlsZWRBbmFseXNpcywKICBBc3Nlc3NtZW50RGF0YSwKICBTeW1wdG9tTWF0Y2gsCiAgVGltZUZyYW1lLAogIFF1ZXN0aW9ubmFpcmVTZWN0aW9uLAogIENvbXByZWhlbnNpdmVSZWNvbW1lbmRhdGlvbgp9IGZyb20gJy4uL3R5cGVzJzsKCi8vIENvbnN0YW50cwpjb25zdCBWSVNJT05fTU9ERUwgPSAnbGxhbWEtMy4yLTkwYi12aXNpb24tcHJldmlldyc7CmNvbnN0IFRFWFRfTU9ERUwgPSAnbGxhbWEtMy4xLTcwYi12ZXJzYXRpbGUnOwoKLy8gRXhwb3J0IGZ1bmN0aW9ucyBkaXJlY3RseQpleHBvcnQgYXN5bmMgZnVuY3Rpb24gYW5hbHl6ZUltYWdlKGJhc2U2NEltYWdlOiBzdHJpbmcsIHVzZXJJbmZvPzogVXNlckluZm8pOiBQcm9taXNlPEltYWdlQW5hbHlzaXNSZXN1bHQ+IHsKICAvLyBJbXBsZW1lbnRhdGlvbgp9
+import { Groq } from 'groq-sdk';
+import { env } from '../config/env';
+import { UserInfo, Question, FinalRecommendation, ImageAnalysisResult } from '../types';
+
+// Export functions directly
+export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Promise<ImageAnalysisResult> {
+  // Implementation
+}
+
+// Other exports...
