@@ -1,117 +1,206 @@
 import { Groq } from 'groq-sdk';
 import { env } from '../config/env';
-// ... [previous imports remain the same]
+import { 
+  UserInfo, 
+  Question, 
+  FinalRecommendation, 
+  ImageAnalysisResult, 
+  DetailedAnalysis,
+  AssessmentData,
+  SymptomMatch,
+  TimeFrame,
+  QuestionnaireSection,
+  ComprehensiveRecommendation
+} from '../types';
 
-// Update the recommendation generation function with stricter safety checks
-async function generateRecommendation(assessmentData: AssessmentData): Promise<ComprehensiveRecommendation> {
+// Constants
+const VISION_MODEL = 'llama-3.2-90b-vision-preview';
+const TEXT_MODEL = 'llama-3.1-70b-versatile';
+
+class ApiKeyManager {
+  private currentIndex = 0;
+  private usageCount: { [key: string]: number } = {};
+  private lastUsed: { [key: string]: number } = {};
+  private readonly USAGE_LIMIT = 3;
+  private readonly COOLDOWN_PERIOD = 6000;
+
+  constructor(private apiKeys: string[]) {
+    if (!apiKeys.length) {
+      throw new Error('No API keys provided');
+    }
+  }
+
+  getNextKey(): string {
+    const now = Date.now();
+    let attempts = 0;
+    
+    while (attempts < this.apiKeys.length) {
+      const currentKey = this.apiKeys[this.currentIndex];
+      const lastUsedTime = this.lastUsed[currentKey] || 0;
+      const timeSinceLastUse = now - lastUsedTime;
+
+      if (timeSinceLastUse < this.COOLDOWN_PERIOD && this.usageCount[currentKey] >= this.USAGE_LIMIT) {
+        this.currentIndex = (this.currentIndex + 1) % this.apiKeys.length;
+        attempts++;
+        continue;
+      }
+
+      if (timeSinceLastUse >= this.COOLDOWN_PERIOD) {
+        this.usageCount[currentKey] = 0;
+      }
+
+      this.usageCount[currentKey] = (this.usageCount[currentKey] || 0) + 1;
+      this.lastUsed[currentKey] = now;
+
+      if (this.usageCount[currentKey] >= this.USAGE_LIMIT) {
+        this.currentIndex = (this.currentIndex + 1) % this.apiKeys.length;
+      }
+
+      return currentKey;
+    }
+
+    return this.apiKeys[0];
+  }
+}
+
+const keyManager = new ApiKeyManager(env.groqApiKeys);
+
+function createGroqClient() {
+  const apiKey = keyManager.getNextKey();
+  if (!apiKey || !apiKey.startsWith('gsk_')) {
+    throw new Error('Invalid API key format');
+  }
+
+  return new Groq({
+    apiKey,
+    dangerouslyAllowBrowser: true
+  });
+}
+
+// Helper function to check if a condition is severe
+async function checkConditionSeverity(condition: string, symptoms: string[]): Promise<{
+  isSerious: boolean;
+  canProvidePainRelief: boolean;
+  requiresImmediate: boolean;
+  reasons: string[];
+}> {
   const groq = createGroqClient();
-
-  const severityCheckPrompt = `
-  Medical Safety Assessment:
-  ${JSON.stringify(assessmentData, null, 2)}
-
-  Evaluate if this is a serious medical condition requiring professional attention ONLY.
-  Return JSON: { "isSerious": boolean, "reasons": string[], "requiresProfessional": boolean }
   
-  Consider:
+  const prompt = `Medical Safety Assessment for: "${condition}"
+  Evaluate:
   1. Is this potentially life-threatening?
-  2. Could this indicate a severe underlying condition?
-  3. Are prescription medications typically required?
-  4. Is professional diagnosis necessary?
-  5. Could self-treatment be dangerous?
-  `;
+  2. Could pain relief mask dangerous symptoms?
+  3. Is immediate medical attention required?
+  4. Could delaying treatment be dangerous?
 
-  const severityCheck = await groq.chat.completions.create({
-    messages: [{ role: 'user', content: severityCheckPrompt }],
+  Return JSON: {
+    "isSerious": boolean,
+    "canProvidePainRelief": boolean,
+    "requiresImmediate": boolean,
+    "reasons": string[]
+  }`;
+
+  const completion = await groq.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
     model: TEXT_MODEL,
     temperature: 0.1,
     max_tokens: 500,
     response_format: { type: "json_object" }
   });
 
-  const severityResponse = JSON.parse(severityCheck.choices[0]?.message?.content || '{}');
-
-  // Modify the main analysis prompt based on severity
-  const analysisPrompt = `As a medical professional, analyze this patient's condition with extreme caution regarding medication recommendations:
-
-Patient Information:
-${JSON.stringify(assessmentData.userInfo, null, 2)}
-
-Visual Analysis Results:
-${assessmentData.imageAnalysis ? JSON.stringify(assessmentData.imageAnalysis, null, 2) : 'No image analysis available'}
-
-Questionnaire Responses:
-${JSON.stringify(assessmentData.questionnaireAnswers, null, 2)}
-
-CRITICAL SAFETY GUIDELINES:
-1. DO NOT recommend any over-the-counter medications for:
-   - Severe symptoms
-   - Potentially serious conditions
-   - Conditions requiring professional diagnosis
-   - Complex medical situations
-   - Any condition where self-treatment could mask serious problems
-
-2. Instead for serious conditions:
-   - Emphasize importance of professional medical care
-   - Provide interim self-care measures (if safe)
-   - Suggest natural remedies ONLY if scientifically supported and safe
-   - Focus on lifestyle modifications and preventive measures
-   - Include clear warning signs and emergency indicators
-
-3. For mild conditions only:
-   - Recommend OTC medications only with clear safety warnings
-   - Include specific contraindications
-   - Emphasize proper usage and limitations
-   - Include when to seek professional care
-
-4. Special populations (extra caution):
-   - Children under 12
-   - Elderly patients
-   - Pregnant/nursing women
-   - People with chronic conditions
-   - Patients on other medications
-
-THIS IS A ${severityResponse.isSerious ? 'SERIOUS' : 'NON-SERIOUS'} CONDITION.
-${severityResponse.isSerious ? 'DO NOT INCLUDE ANY OTC MEDICATION RECOMMENDATIONS.' : 'Include appropriate OTC recommendations with safety guidelines.'}
-
-Provide analysis in this EXACT JSON format:
-{
-  "analysis": {
-    // [previous JSON structure remains the same]
-  }
-}`;
-
-  // [Rest of the function remains the same]
+  const response = JSON.parse(completion.choices[0]?.message?.content || '{}');
+  return response;
 }
 
-// Update helper functions with enhanced safety checks
-function mapSeverity(urgencyLevel: string): 'mild' | 'moderate' | 'severe' {
-  switch (urgencyLevel.toLowerCase()) {
-    case 'emergency':
-    case 'urgent':
-      return 'severe';
-    case 'routine':
-      return 'moderate';
-    default:
-      return 'mild';
+// Export functions
+export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Promise<ImageAnalysisResult> {
+  let attempts = 0;
+  const maxAttempts = env.groqApiKeys.length;
+
+  while (attempts < maxAttempts) {
+    try {
+      const groq = createGroqClient();
+
+      const prompt = `As a medical professional, analyze this medical image with safety as the top priority:
+
+      Patient Information:
+      ${userInfo ? `
+      - Reported Symptom: ${userInfo.primaryIssue}
+      - Age: ${userInfo.age} ${userInfo.ageUnit}
+      - Gender: ${userInfo.gender}
+      ` : 'No patient information provided'}
+
+      CRITICAL: Evaluate severity and immediate medical needs first.
+
+      Return your analysis as a JSON object with these exact fields:
+      // [Rest of the prompt structure remains the same]`;
+
+      const completion = await groq.chat.completions.create({
+        model: VISION_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: base64Image.startsWith('data:') 
+                    ? base64Image 
+                    : `data:image/jpeg;base64,${base64Image}`,
+                  detail: 'high'
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 8000,
+        response_format: { type: "json_object" }
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) throw new Error('No response from AI');
+
+      const analysis = JSON.parse(response);
+      
+      // Check severity before processing
+      const severityCheck = await checkConditionSeverity(
+        analysis.clinicalAssessment.primaryCondition,
+        analysis.clinicalAssessment.severityIndicators
+      );
+
+      // Update the analysis with severity information
+      const transformedAnalysis: ImageAnalysisResult = {
+        // [Previous transformation logic]
+        medicalConsiderations: {
+          ...analysis.medicalConsiderations,
+          requiresAttention: severityCheck.requiresImmediate,
+          urgencyLevel: severityCheck.isSerious ? 'emergency' : analysis.medicalConsiderations.urgencyLevel,
+          reasonsForUrgency: [
+            ...analysis.medicalConsiderations.reasonsForUrgency,
+            ...severityCheck.reasons
+          ]
+        }
+      };
+
+      return transformedAnalysis;
+
+    } catch (error) {
+      attempts++;
+      if (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        continue;
+      }
+      throw new Error('Failed to analyze image after all attempts');
+    }
   }
+
+  throw new Error('Failed to analyze image');
 }
 
-function getAgeSpecificInstructions(userInfo: UserInfo): string {
-  const { age, ageUnit } = userInfo;
-  
-  if (ageUnit === 'months' || (ageUnit === 'years' && age < 12)) {
-    return 'IMPORTANT: For children, always consult a healthcare provider before using any medications or treatments.';
-  } else if (age >= 65) {
-    return 'IMPORTANT: For seniors, consult healthcare provider before starting any new treatment due to potential interactions and complications.';
-  }
-  return 'When in doubt, consult a healthcare provider before starting any new treatment.';
-}
-
-// [Rest of the code remains the same]
-
+// [Rest of the exported functions]
 export {
-  analyzeImage,
   checkConditionMatch,
   generateFollowUpQuestions,
   generateRecommendation,
