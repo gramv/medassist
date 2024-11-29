@@ -1,4 +1,66 @@
-{
-  "content": "import { Groq } from 'groq-sdk';\nimport { env } from '../config/env';\nimport { UserInfo, Question, FinalRecommendation, ImageAnalysisResult, DetailedAnalysis, AssessmentData, SymptomMatch, TimeFrame, QuestionnaireSection, ComprehensiveRecommendation } from '../types';\n\n// Constants\nconst VISION_MODEL = 'llama-3.2-90b-vision-preview';\nconst TEXT_MODEL = 'llama-3.1-70b-versatile';\n\n// Your KeyManager class and other helper functions...\n\n// Primary export functions\nexport async function analyzeImage(base64Image: string, userInfo?: UserInfo): Promise<ImageAnalysisResult> {\n  // Implementation\n}\n\nexport async function checkConditionMatch(condition: string, analysis: ImageAnalysisResult): Promise<SymptomMatch> {\n  // Implementation\n}\n\n// Export other functions...\n",
-  "encoding": "utf8"
+import { Groq } from 'groq-sdk';
+import { env } from '../config/env';
+import { 
+  UserInfo, 
+  Question, 
+  FinalRecommendation, 
+  ImageAnalysisResult, 
+  DetailedAnalysis,
+  AssessmentData,
+  SymptomMatch,
+  TimeFrame,
+  QuestionnaireSection,
+  ComprehensiveRecommendation
+} from '../types';
+
+// Constants
+const VISION_MODEL = 'llama-3.2-90b-vision-preview';
+const TEXT_MODEL = 'llama-3.1-70b-versatile';
+
+// Export all functions directly
+export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Promise<ImageAnalysisResult> {
+  // ... implementation
 }
+
+export async function checkConditionMatch(condition: string, analysis: ImageAnalysisResult): Promise<SymptomMatch> {
+  // ... implementation
+}
+
+export async function generateFollowUpQuestions(assessmentData: AssessmentData): Promise<Question[]> {
+  // ... implementation
+}
+
+export async function generateRecommendation(assessmentData: AssessmentData): Promise<ComprehensiveRecommendation> {
+  // ... implementation
+}
+
+export async function shouldRequestImage(userInfo: UserInfo): Promise<{ requiresImage: boolean; reason: string }> {
+  // ... implementation
+}
+
+export async function generateDetailedAnalysis(imageAnalysis: ImageAnalysisResult): Promise<DetailedAnalysis> {
+  // ... implementation
+}
+
+export function mapTimeframe(urgencyLevel: string = 'routine'): TimeFrame {
+  // ... implementation
+}
+
+// Helper functions (not exported)
+class ApiKeyManager {
+  // ... implementation
+}
+
+function createGroqClient() {
+  // ... implementation
+}
+
+function mapSeverity(urgencyLevel: string): 'mild' | 'moderate' | 'severe' {
+  // ... implementation
+}
+
+function getAgeSpecificInstructions(userInfo: UserInfo): string {
+  // ... implementation
+}
+
+// Add other helper functions as needed
