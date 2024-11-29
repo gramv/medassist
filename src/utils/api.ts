@@ -13,10 +13,7 @@ import {
   ComprehensiveRecommendation
 } from '../types';
 
-// Constants
-const VISION_MODEL = 'llama-3.2-90b-vision-preview';
-const TEXT_MODEL = 'llama-3.1-70b-versatile';
-
+// API key management
 class ApiKeyManager {
   private currentIndex = 0;
   private usageCount: { [key: string]: number } = {};
@@ -64,55 +61,21 @@ class ApiKeyManager {
 }
 
 const keyManager = new ApiKeyManager(env.groqApiKeys);
+const VISION_MODEL = 'llama-3.2-90b-vision-preview';
+const TEXT_MODEL = 'llama-3.1-70b-versatile';
 
 function createGroqClient() {
   const apiKey = keyManager.getNextKey();
   if (!apiKey || !apiKey.startsWith('gsk_')) {
     throw new Error('Invalid API key format');
   }
-
   return new Groq({
     apiKey,
     dangerouslyAllowBrowser: true
   });
 }
 
-// Helper function to check if a condition is severe
-async function checkConditionSeverity(condition: string, symptoms: string[]): Promise<{
-  isSerious: boolean;
-  canProvidePainRelief: boolean;
-  requiresImmediate: boolean;
-  reasons: string[];
-}> {
-  const groq = createGroqClient();
-  
-  const prompt = `Medical Safety Assessment for: "${condition}"
-  Evaluate:
-  1. Is this potentially life-threatening?
-  2. Could pain relief mask dangerous symptoms?
-  3. Is immediate medical attention required?
-  4. Could delaying treatment be dangerous?
-
-  Return JSON: {
-    "isSerious": boolean,
-    "canProvidePainRelief": boolean,
-    "requiresImmediate": boolean,
-    "reasons": string[]
-  }`;
-
-  const completion = await groq.chat.completions.create({
-    messages: [{ role: 'user', content: prompt }],
-    model: TEXT_MODEL,
-    temperature: 0.1,
-    max_tokens: 500,
-    response_format: { type: "json_object" }
-  });
-
-  const response = JSON.parse(completion.choices[0]?.message?.content || '{}');
-  return response;
-}
-
-// Export functions
+// Primary Functions
 export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Promise<ImageAnalysisResult> {
   let attempts = 0;
   const maxAttempts = env.groqApiKeys.length;
@@ -120,20 +83,60 @@ export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Pr
   while (attempts < maxAttempts) {
     try {
       const groq = createGroqClient();
+      const prompt = `As a medical professional, analyze this medical image with focus on safety:
 
-      const prompt = `As a medical professional, analyze this medical image with safety as the top priority:
+Patient Information:
+${userInfo ? `
+- Reported Symptom: ${userInfo.primaryIssue}
+- Age: ${userInfo.age} ${userInfo.ageUnit}
+- Gender: ${userInfo.gender}
+` : 'No patient information provided'}
 
-      Patient Information:
-      ${userInfo ? `
-      - Reported Symptom: ${userInfo.primaryIssue}
-      - Age: ${userInfo.age} ${userInfo.ageUnit}
-      - Gender: ${userInfo.gender}
-      ` : 'No patient information provided'}
+Please analyze the image considering:
+1. Severity and urgency
+2. Need for immediate medical attention
+3. Visual characteristics
+4. Correlation with reported symptoms
+5. Age-specific concerns
 
-      CRITICAL: Evaluate severity and immediate medical needs first.
-
-      Return your analysis as a JSON object with these exact fields:
-      // [Rest of the prompt structure remains the same]`;
+Return your analysis as a JSON object with these exact fields:
+{
+  "anatomicalDetails": {
+    "location": {
+      "primarySite": string,
+      "specificLocation": string,
+      "depth": "superficial" | "moderate" | "deep",
+      "distribution": "localized" | "spreading" | "diffuse"
+    }
+  },
+  "visualCharacteristics": {
+    "primary": {
+      "color": string[],
+      "texture": string[],
+      "pattern": string,
+      "borders": string
+    },
+    "progression": {
+      "stage": "acute" | "subacute" | "chronic",
+      "timeline": string,
+      "healingIndicators": string[]
+    }
+  },
+  "clinicalAssessment": {
+    "primaryCondition": string,
+    "differentialDiagnoses": string[],
+    "confidence": number,
+    "severityIndicators": string[],
+    "complicationRisks": string[]
+  },
+  "medicalConsiderations": {
+    "requiresAttention": boolean,
+    "urgencyLevel": "routine" | "urgent" | "emergency",
+    "reasonsForUrgency": string[],
+    "recommendedTimeframe": string,
+    "warningSignsPresent": string[]
+  }
+}`;
 
       const completion = await groq.chat.completions.create({
         model: VISION_MODEL,
@@ -163,24 +166,39 @@ export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Pr
       if (!response) throw new Error('No response from AI');
 
       const analysis = JSON.parse(response);
-      
-      // Check severity before processing
-      const severityCheck = await checkConditionSeverity(
-        analysis.clinicalAssessment.primaryCondition,
-        analysis.clinicalAssessment.severityIndicators
-      );
 
-      // Update the analysis with severity information
       const transformedAnalysis: ImageAnalysisResult = {
-        // [Previous transformation logic]
-        medicalConsiderations: {
-          ...analysis.medicalConsiderations,
-          requiresAttention: severityCheck.requiresImmediate,
-          urgencyLevel: severityCheck.isSerious ? 'emergency' : analysis.medicalConsiderations.urgencyLevel,
-          reasonsForUrgency: [
-            ...analysis.medicalConsiderations.reasonsForUrgency,
-            ...severityCheck.reasons
-          ]
+        anatomicalDetails: analysis.anatomicalDetails,
+        visualCharacteristics: analysis.visualCharacteristics,
+        clinicalAssessment: analysis.clinicalAssessment,
+        medicalConsiderations: analysis.medicalConsiderations,
+        bodyPart: {
+          detected: analysis.anatomicalDetails.location.primarySite,
+          confidence: '100%'
+        },
+        condition: {
+          type: analysis.clinicalAssessment.primaryCondition,
+          characteristics: [
+            ...analysis.visualCharacteristics.primary.color,
+            ...analysis.visualCharacteristics.primary.texture
+          ],
+          severity: mapSeverity(analysis.medicalConsiderations.urgencyLevel),
+          confidence: `${Math.round(analysis.clinicalAssessment.confidence * 100)}%`,
+          stage: analysis.visualCharacteristics.progression.stage,
+          visualFeatures: {
+            primary: [
+              analysis.visualCharacteristics.primary.pattern,
+              analysis.visualCharacteristics.primary.borders,
+              ...analysis.visualCharacteristics.primary.texture
+            ],
+            secondary: []
+          }
+        },
+        urgency: {
+          requiresMedicalAttention: analysis.medicalConsiderations.requiresAttention,
+          timeframe: mapTimeframe(analysis.medicalConsiderations.urgencyLevel),
+          reasoning: analysis.medicalConsiderations.reasonsForUrgency,
+          redFlags: analysis.medicalConsiderations.warningSignsPresent
         }
       };
 
@@ -188,6 +206,8 @@ export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Pr
 
     } catch (error) {
       attempts++;
+      console.error(`Analysis attempt ${attempts} failed:`, error);
+
       if (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 6000));
         continue;
@@ -195,16 +215,41 @@ export async function analyzeImage(base64Image: string, userInfo?: UserInfo): Pr
       throw new Error('Failed to analyze image after all attempts');
     }
   }
-
   throw new Error('Failed to analyze image');
 }
 
-// [Rest of the exported functions]
+// Helper Functions
+function mapSeverity(urgencyLevel: string): 'mild' | 'moderate' | 'severe' {
+  switch (urgencyLevel.toLowerCase()) {
+    case 'emergency':
+      return 'severe';
+    case 'urgent':
+      return 'moderate';
+    case 'routine':
+      return 'mild';
+    default:
+      return 'moderate';
+  }
+}
+
+export function mapTimeframe(urgencyLevel: string = 'routine'): TimeFrame {
+  switch (urgencyLevel.toLowerCase()) {
+    case 'emergency':
+      return 'immediate';
+    case 'urgent':
+      return '24_hours';
+    case 'routine':
+      return 'within_week';
+    default:
+      return 'self_care';
+  }
+}
+
+// Export other functions
 export {
   checkConditionMatch,
   generateFollowUpQuestions,
   generateRecommendation,
   shouldRequestImage,
-  generateDetailedAnalysis,
-  mapTimeframe
+  generateDetailedAnalysis
 };
